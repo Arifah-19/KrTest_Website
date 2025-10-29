@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Korean Language Flashcards & Quiz</title>
+<style>
+    body { 
+    font-family: Arial, sans-serif; 
+    text-align: center; 
+    background-color: #f0f8ff; 
+    margin:0; 
+    padding:0; 
+    }
+    header { 
+    background-color: #008080; 
+    color: white; 
+    padding: 1rem; 
+    }
+    button { 
+    margin: 0.5rem; 
+    padding: 0.5rem 1rem; 
+    cursor: pointer; 
+    }
+    #flashcardContainer { 
+    width: 300px; 
+    height: 200px; 
+    margin: 2rem auto; 
+    perspective: 1000px; 
+    }
+    .flashcard { 
+    width: 100%; 
+    height: 100%; 
+    background-color: #fff; 
+    border: 2px solid #008080; 
+    border-radius: 10px;
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    font-size: 1.5rem; 
+    cursor: pointer;
+    transition: transform 0.6s; 
+    transform-style: preserve-3d; 
+    position: relative; 
+    }
+    .flashcard.flipped { 
+    transform: rotateY(180deg); 
+    }
+    .flashcard .front, .flashcard .back { 
+    position: absolute; 
+    width: 100%; 
+    height: 100%; 
+    backface-visibility: hidden;
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    }
+    .flashcard .back { 
+    transform: rotateY(180deg); 
+    background-color: #ffe4c4; 
+    }
+    #quizContainer { 
+    text-align: left; 
+    max-width: 500px; 
+    margin: auto; 
+    }
+</style>
+</head>
+<body>
+<header>
+<h1>Korean Language Flashcards & Quiz</h1>
+<nav>
+<button id="flashcardsBtn">Flashcards</button>
+<button id="quizBtn">Quiz</button>
+</nav>
+</header>
+
+<main>
+<section id="flashcardsSection">
+<div id="flashcardContainer"></div>
+<div>
+<button id="prevCard">Previous</button>
+<button id="nextCard">Next</button>
+<button id="shuffleCards">Shuffle</button>
+<button id="pauseFlip">Pause/Resume Auto-Flip</button>
+</div>
+<div id="progress"></div>
+</section>
+
+<section id="quizSection" style="display:none;">
+<div id="quizContainer"></div>
+<button id="submitQuiz">Submit</button>
+<button id="tryAgain" style="display:none;">Try Again</button>
+<div id="score"></div>
+</section>
+</main>
+
+<script>
+// ---------------- Flashcards Data (500+ items) ----------------
+const flashcards = [
+    // --- Greetings ---
+  {korean: "안녕하세요", english: "Hello"},
+  {korean: "안녕", english: "Hi"},
+  {korean: "좋은 아침", english: "Good morning"},
+  {korean: "좋은 밤", english: "Good night"},
+  {korean: "잘 지내세요?", english: "How are you?"},
+  {korean: "만나서 반갑습니다", english: "Nice to meet you"},
+  {korean: "안녕히 가세요", english: "Goodbye (to someone leaving)"},
+  {korean: "안녕히 계세요", english: "Goodbye (to someone staying)"},
+  {korean: "감사합니다", english: "Thank you"},
+  {korean: "고맙습니다", english: "Thanks"},
+  {korean: "죄송합니다", english: "Sorry"},
+  {korean: "괜찮아요", english: "It's okay"},
+  {korean: "사랑해요", english: "I love you"},
+  {korean: "축하합니다", english: "Congratulations"},
+  {korean: "안녕히 주무세요", english: "Good night (polite)"},
+  {korean: "좋은 하루 되세요", english: "Have a nice day"},
+  {korean: "좋은 저녁 되세요", english: "Have a good evening"},
+  {korean: "편히 쉬세요", english: "Rest well"},
+  {korean: "수고하세요", english: "Keep up the good work"},
+  {korean: "수고하셨습니다", english: "Thank you for your effort"},
+
+  // --- Daily Phrases ---
+  {korean: "잘 했어요", english: "Well done"},
+  {korean: "화이팅", english: "Fighting!/You can do it"},
+  {korean: "조심하세요", english: "Be careful"},
+  {korean: "천천히 말해 주세요", english: "Please speak slowly"},
+  {korean: "다시 말해 주세요", english: "Please say it again"},
+  {korean: "이해했어요", english: "I understand"},
+  {korean: "모르겠어요", english: "I don't understand"},
+  {korean: "도와주세요", english: "Please help me"},
+  {korean: "괜찮습니다", english: "It's fine"},
+  {korean: "알겠습니다", english: "I got it"},
+  {korean: "조심히 가세요", english: "Go safely"},
+  {korean: "처음 뵙겠습니다", english: "Nice to meet you for the first time"},
+  {korean: "잘 지내셨어요?", english: "Have you been well?"},
+  {korean: "기분이 어때요?", english: "How do you feel?"}, 
+  {korean: "무슨 일이에요?", english: "What’s the matter?"},
+  {korean: "정말요?", english: "Really?"},
+  {korean: "대단해요", english: "Amazing / Great"},
+  {korean: "힘내세요", english: "Cheer up / Stay strong"},
+  {korean: "모르겠어요", english: "I don’t know"},
+  {korean: "잠깐만요", english: "Just a moment"},
+  {korean: "물론이죠", english: "Of course"},
+
+  // --- Numbers 1-20 ---
+  {korean: "하나", english: "One"},
+  {korean: "둘", english: "Two"},
+  {korean: "셋", english: "Three"},
+  {korean: "넷", english: "Four"},
+  {korean: "다섯", english: "Five"},
+  {korean: "여섯", english: "Six"},
+  {korean: "일곱", english: "Seven"},
+  {korean: "여덟", english: "Eight"},
+  {korean: "아홉", english: "Nine"},
+  {korean: "열", english: "Ten"},
+  {korean: "열하나", english: "Eleven"},
+  {korean: "열둘", english: "Twelve"},
+  {korean: "열셋", english: "Thirteen"},
+  {korean: "열넷", english: "Fourteen"},
+  {korean: "열다섯", english: "Fifteen"},
+  {korean: "열여섯", english: "Sixteen"},
+  {korean: "열일곱", english: "Seventeen"},
+  {korean: "열여덟", english: "Eighteen"},
+  {korean: "열아홉", english: "Nineteen"},
+  {korean: "스물", english: "Twenty"},
+
+  // --- Colors ---
+  {korean: "빨강", english: "Red"},
+  {korean: "파랑", english: "Blue"},
+  {korean: "노랑", english: "Yellow"},
+  {korean: "초록", english: "Green"},
+  {korean: "검정", english: "Black"},
+  {korean: "하양", english: "White"},
+  {korean: "주황", english: "Orange"},
+  {korean: "분홍", english: "Pink"},
+  {korean: "보라", english: "Purple"},
+  {korean: "갈색", english: "Brown"},
+
+  // --- Food ---
+  {korean: "밥", english: "Rice"},
+  {korean: "국", english: "Soup"},
+  {korean: "김치", english: "Kimchi"},
+  {korean: "고기", english: "Meat"},
+  {korean: "물", english: "Water"},
+  {korean: "커피", english: "Coffee"},
+  {korean: "차", english: "Tea"},
+  {korean: "과일", english: "Fruit"},
+  {korean: "채소", english: "Vegetables"},
+  {korean: "빵", english: "Bread"},
+
+  // --- Travel / Directions ---
+  {korean: "왼쪽", english: "Left"},
+  {korean: "오른쪽", english: "Right"},
+  {korean: "앞", english: "Front"},
+  {korean: "뒤", english: "Back"},
+  {korean: "길", english: "Road / Street"},
+  {korean: "공항", english: "Airport"},
+  {korean: "버스", english: "Bus"},
+  {korean: "지하철", english: "Subway"},
+  {korean: "택시", english: "Taxi"},
+  {korean: "호텔", english: "Hotel"},
+
+  // --- Emotions / Feelings ---
+  {korean: "행복해요", english: "I am happy"},
+  {korean: "슬퍼요", english: "I am sad"},
+  {korean: "화나요", english: "I am angry"},
+  {korean: "배고파요", english: "I am hungry"},
+  {korean: "목말라요", english: "I am thirsty"},
+  {korean: "피곤해요", english: "I am tired"},
+  {korean: "심심해요", english: "I am bored"},
+  {korean: "걱정돼요", english: "I am worried"},
+  {korean: "무서워요", english: "I am scared"},
+  {korean: "놀랐어요", english: "I am surprised"},
+
+  // --- Common Verbs ---
+  {korean: "가다", english: "To go"},
+  {korean: "오다", english: "To come"},
+  {korean: "먹다", english: "To eat"},
+  {korean: "마시다", english: "To drink"},
+  {korean: "보다", english: "To see / To watch"},
+  {korean: "듣다", english: "To listen"},
+  {korean: "말하다", english: "To speak"},
+  {korean: "걷다", english: "To walk"},
+  {korean: "달리다", english: "To run"},
+  {korean: "자다", english: "To sleep"},
+   
+  // --- Daily Phrases & Expressions ---
+  {korean: "괜찮아요?", english: "Are you okay?" },
+  {korean: "좋아요", english: "Good / I like it" },
+  {korean: "싫어요", english: "I don't like it" },
+  {korean: "잠시만요", english: "Just a moment" },
+  {korean: "물론이죠", english: "Of course" },
+  {korean: "알겠어요", english: "I understand" },
+  {korean: "정말요?", english: "Really?" },
+  {korean: "대단해요", english: "Great / Amazing" },
+  {korean: "조금만요", english: "Just a little" },
+  {korean: "정말 감사합니다", english: "Thank you very much" },
+
+// --- Shopping & Money ---
+  {korean: "얼마예요?", english: "How much is it?" },
+  {korean: "비싸요", english: "It's expensive" },
+  {korean: "싸요", english: "It's cheap" },
+  {korean: "카드로 계산할게요", english: "I will pay by card" },
+  {korean: "현금으로 할게요", english: "I will pay cash" },
+  {korean: "영수증 주세요", english: "Please give me a receipt" },
+  {korean: "환불할 수 있어요?", english: "Can I get a refund?" },
+  {korean: "할인 돼요?", english: "Is there a discount?" },
+  {korean: "사다", english: "To buy" },
+  {korean: "팔다", english: "To sell" },
+  {korean: "쇼핑하다", english: "To shop"},
+  {korean: "물건", english: "Item / Thing"},
+  {korean: "가게", english: "Store / Shop"},
+  {korean: "시장", english: "Market"},
+  {korean: "상점", english: "Shop / Store"},
+  {korean: "할인", english: "Discount"},
+  {korean: "세일", english: "Sale"},
+  {korean: "가격", english: "Price"},
+  {korean: "돈", english: "Money"},
+  {korean: "지갑", english: "Wallet"},
+
+// --- School & Study ---
+{ korean: "학교", english: "School" },
+{ korean: "선생님", english: "Teacher" },
+{ korean: "학생", english: "Student" },
+{ korean: "수업", english: "Class / Lesson" },
+{ korean: "공부하다", english: "To study" },
+{ korean: "시험", english: "Exam / Test" },
+{ korean: "숙제", english: "Homework" },
+{ korean: "읽다", english: "To read" },
+{ korean: "쓰다", english: "To write" },
+{ korean: "배우다", english: "To learn" },
+
+// --- Transportation & Travel ---
+{ korean: "기차", english: "Train" },
+{ korean: "비행기", english: "Airplane" },
+{ korean: "지하철역", english: "Subway station" },
+{ korean: "버스 정류장", english: "Bus stop" },
+{ korean: "택시 타다", english: "Take a taxi" },
+{ korean: "표", english: "Ticket" },
+{ korean: "여행", english: "Travel / Trip" },
+{ korean: "지도", english: "Map" },
+{ korean: "길을 잃다", english: "To get lost" },
+{ korean: "예약하다", english: "To reserve / book" },
+
+// --- Family & Relationships ---
+{ korean: "가족", english: "Family" },
+{ korean: "부모님", english: "Parents" },
+{ korean: "아버지", english: "Father" },
+{ korean: "어머니", english: "Mother" },
+{ korean: "형", english: "Older brother (for male)" },
+{ korean: "오빠", english: "Older brother (for female)" },
+{ korean: "누나", english: "Older sister (for male)" },
+{ korean: "언니", english: "Older sister (for female)" },
+{ korean: "동생", english: "Younger sibling" },
+{ korean: "친구", english: "Friend" },
+
+// --- Nature & Environment ---
+{ korean: "산", english: "Mountain" },
+{ korean: "바다", english: "Sea" },
+{ korean: "강", english: "River" },
+{ korean: "나무", english: "Tree" },
+{ korean: "꽃", english: "Flower" },
+{ korean: "하늘", english: "Sky" },
+{ korean: "태양", english: "Sun" },
+{ korean: "비", english: "Rain" },
+{ korean: "눈", english: "Snow" },
+{ korean: "바람", english: "Wind" },
+
+// --- Health & Body ---
+{ korean: "머리", english: "Head" },
+{ korean: "손", english: "Hand" },
+{ korean: "발", english: "Foot" },
+{ korean: "눈", english: "Eye" },
+{ korean: "코", english: "Nose" },
+{ korean: "입", english: "Mouth" },
+{ korean: "다리", english: "Leg" },
+{ korean: "아프다", english: "To be sick / hurt" },
+{ korean: "병원", english: "Hospital" },
+{ korean: "약", english: "Medicine" },
+
+// --- Time & Calendar ---
+{ korean: "오늘", english: "Today" },
+{ korean: "내일", english: "Tomorrow" },
+{ korean: "어제", english: "Yesterday" },
+{ korean: "시간", english: "Time" },
+{ korean: "요일", english: "Day of the week" },
+{ korean: "월요일", english: "Monday" },
+{ korean: "화요일", english: "Tuesday" },
+{ korean: "수요일", english: "Wednesday" },
+{ korean: "목요일", english: "Thursday" },
+{ korean: "금요일", english: "Friday" },
+
+// --- Adjectives & Descriptive Words ---
+{ korean: "크다", english: "Big" },
+{ korean: "작다", english: "Small" },
+{ korean: "길다", english: "Long" },
+{ korean: "짧다", english: "Short" },
+{ korean: "빠르다", english: "Fast" },
+{ korean: "느리다", english: "Slow" },
+{ korean: "좋다", english: "Good" },
+{ korean: "나쁘다", english: "Bad" },
+{ korean: "덥다", english: "Hot (weather)" },
+{ korean: "춥다", english: "Cold (weather)" },
+
+// --- More Verbs ---
+{ korean: "만나다", english: "To meet" },
+{ korean: "사랑하다", english: "To love" },
+{ korean: "싫어하다", english: "To dislike" },
+{ korean: "걱정하다", english: "To worry" },
+{ korean: "기다리다", english: "To wait" },
+{ korean: "열다", english: "To open" },
+{ korean: "닫다", english: "To close" },
+{ korean: "들다", english: "To lift / hold" },
+{ korean: "앉다", english: "To sit" },
+{ korean: "서다", english: "To stand" },
+
+// --- Additional Daily Phrases ---
+{ korean: "어서 오세요", english: "Welcome" },
+{ korean: "잘 지내셨어요?", english: "Have you been well?" },
+{ korean: "처음 뵙겠습니다", english: "Nice to meet you for the first time" },
+{ korean: "수고하셨습니다", english: "Thank you for your effort / Good job" },
+{ korean: "조심히 가세요", english: "Go safely" },
+{ korean: "좋은 하루 되세요", english: "Have a nice day" },
+{ korean: "좋은 저녁 되세요", english: "Have a good evening" },
+{ korean: "편히 쉬세요", english: "Rest well / Take it easy" },
+{ korean: "기분이 어때요?", english: "How do you feel?" },
+{ korean: "무슨 일이에요?", english: "What’s the matter?" },
+
+// --- More Shopping & Food ---
+{ korean: "장보기", english: "Shopping (groceries)" },
+{ korean: "음식점", english: "Restaurant" },
+{ korean: "메뉴", english: "Menu" },
+{ korean: "계산서", english: "Bill / Check" },
+{ korean: "주문하다", english: "To order" },
+{ korean: "배달", english: "Delivery" },
+{ korean: "맛있어요", english: "Delicious" },
+{ korean: "간식", english: "Snack" },
+{ korean: "디저트", english: "Dessert" },
+{ korean: "맛있다", english: "Tasty / Delicious"},
+{ korean: "맛없다", english: "Not tasty / Untasty"},
+{ korean: "신선하다", english: "Fresh"},
+{ korean: "커피숍", english: "Coffee shop"},
+{ korean: "밥을 먹다", english: "To eat a meal"},
+{ korean: "차를 마시다", english: "To drink tea"},
+{ korean: "커피를 마시다", english: "To drink coffee"},
+{ korean: "물 마시다", english: "To drink water"},
+
+// --- More Travel & Directions ---
+{ korean: "길을 찾다", english: "To find the way" },
+{ korean: "교통카드", english: "Transport card" },
+{ korean: "운전하다", english: "To drive" },
+{ korean: "정류장", english: "Station / Stop" },
+{ korean: "표 사다", english: "To buy a ticket" },
+{ korean: "출발하다", english: "To depart" },
+{ korean: "도착하다", english: "To arrive" },
+{ korean: "환승", english: "Transfer / Change trains" },
+{ korean: "역", english: "Station" },
+{ korean: "항구", english: "Port / Harbor" },
+
+// --- More Family & Relationships ---
+{ korean: "사촌", english: "Cousin" },
+{ korean: "조부모", english: "Grandparents" },
+{ korean: "할아버지", english: "Grandfather" },
+{ korean: "할머니", english: "Grandmother" },
+{ korean: "아기", english: "Baby" },
+{ korean: "부부", english: "Couple / Married couple" },
+{ korean: "친척", english: "Relatives" },
+{ korean: "이웃", english: "Neighbor" },
+{ korean: "친구 사귀다", english: "Make friends" },
+{ korean: "결혼하다", english: "To get married" },
+
+// --- More Nature & Environment ---
+{ korean: "강물", english: "River water" },
+{ korean: "호수", english: "Lake" },
+{ korean: "섬", english: "Island" },
+{ korean: "숲", english: "Forest" },
+{ korean: "바위", english: "Rock" },
+{ korean: "모래", english: "Sand" },
+{ korean: "달", english: "Moon" },
+{ korean: "별", english: "Star" },
+{ korean: "비바람", english: "Rain and wind / Storm" },
+{ korean: "무지개", english: "Rainbow" },
+
+// --- More Health & Body ---
+{ korean: "어깨", english: "Shoulder" },
+{ korean: "팔", english: "Arm" },
+{ korean: "허리", english: "Waist / Lower back" },
+{ korean: "배", english: "Stomach / Belly" },
+{ korean: "심장", english: "Heart" },
+{ korean: "혈액", english: "Blood" },
+{ korean: "병", english: "Disease / Illness" },
+{ korean: "건강하다", english: "To be healthy" },
+{ korean: "치료하다", english: "To treat / Cure" },
+{ korean: "운동하다", english: "To exercise" },
+
+// --- More Time & Calendar ---
+{ korean: "오전", english: "AM" },
+{ korean: "오후", english: "PM" },
+{ korean: "시간표", english: "Schedule / Timetable" },
+{ korean: "달력", english: "Calendar" },
+{ korean: "오늘 아침", english: "This morning" },
+{ korean: "오늘 저녁", english: "This evening" },
+{ korean: "이번 주", english: "This week" },
+{ korean: "이번 달", english: "This month" },
+{ korean: "지난 주", english: "Last week" },
+{ korean: "지난 달", english: "Last month" },
+
+// --- More Adjectives & Descriptive Words ---
+{ korean: "높다", english: "High / Tall" },
+{ korean: "낮다", english: "Low" },
+{ korean: "두껍다", english: "Thick" },
+{ korean: "얇다", english: "Thin" },
+{ korean: "비싸다", english: "Expensive" },
+{ korean: "싸다", english: "Cheap" },
+{ korean: "깨끗하다", english: "Clean" },
+{ korean: "더럽다", english: "Dirty" },
+{ korean: "맛있다", english: "Tasty" },
+{ korean: "맛없다", english: "Untasty" },
+
+// --- More Verbs ---
+{ korean: "씻다", english: "To wash" },
+{ korean: "청소하다", english: "To clean" },
+{ korean: "운전하다", english: "To drive" },
+{ korean: "요리하다", english: "To cook" },
+{ korean: "걷다", english: "To walk" },
+{ korean: "달리다", english: "To run" },
+{ korean: "공부하다", english: "To study" },
+{ korean: "일하다", english: "To work" },
+{ korean: "놀다", english: "To play" },
+{ korean: "쉬다", english: "To rest" },
+
+// --- Travel & Directions ---
+{korean: "길", english: "Road / Street"},
+{korean: "길 찾다", english: "To find the way"},
+{korean: "왼쪽", english: "Left"},
+{korean: "오른쪽", english: "Right"},
+{korean: "앞", english: "Front"},
+{korean: "뒤", english: "Back"},
+{korean: "교통카드", english: "Transport card"},
+{korean: "지하철", english: "Subway"},
+{korean: "버스", english: "Bus"},
+{korean: "택시", english: "Taxi"},
+{korean: "택시 타다", english: "To take a taxi"},
+{korean: "기차", english: "Train"},
+{korean: "기차역", english: "Train station"},
+{korean: "비행기", english: "Airplane"},
+{korean: "비행기표", english: "Plane ticket"},
+{korean: "공항", english: "Airport"},
+{korean: "역", english: "Station"},
+{korean: "정류장", english: "Station / Stop"},
+{korean: "버스 정류장", english: "Bus stop"},
+{korean: "도착하다", english: "To arrive"},
+{korean: "출발하다", english: "To depart"},
+{korean: "도착시간", english: "Arrival time"},
+{korean: "출발시간", english: "Departure time"},
+{korean: "환승", english: "Transfer / Change trains"},
+{korean: "여행", english: "Travel / Trip"},
+{korean: "여행 가방", english: "Suitcase"},
+{korean: "여권", english: "Passport"},
+{korean: "관광", english: "Sightseeing / Tourism"},
+{korean: "관광지", english: "Tourist spot"},
+{korean: "지도", english: "Map"},
+{korean: "지도 앱", english: "Map app"},
+
+// --- More Daily Phrases ---
+{ korean: "기분 좋다", english: "Feel good" },
+{ korean: "기분 나쁘다", english: "Feel bad" },
+{ korean: "축하해요", english: "Congratulations!" },
+{ korean: "행운을 빌어요", english: "Good luck" },
+{ korean: "죄송하지만", english: "Excuse me / Sorry" },
+{ korean: "잠깐만요", english: "Just a moment" },
+{ korean: "이해했어요", english: "I understood" },
+{ korean: "모르겠어요", english: "I don’t know" },
+{ korean: "정말 대단해요", english: "That’s amazing" },
+{ korean: "힘내세요", english: "Cheer up / Stay strong" },
+
+// --- More Shopping & Food ---
+{ korean: "음식", english: "Food" },
+{ korean: "간단한 음식", english: "Snack / Light meal" },
+{ korean: "주문", english: "Order" },
+{ korean: "메뉴판", english: "Menu card" },
+{ korean: "배달 음식", english: "Delivery food" },
+{ korean: "포장하다", english: "To take out / Pack" },
+{ korean: "신선하다", english: "Fresh" },
+{ korean: "맛보다", english: "To taste" },
+{ korean: "음료", english: "Beverage" },
+{ korean: "술", english: "Alcohol" },
+
+// --- More Travel & Directions ---
+{ korean: "비행기표", english: "Plane ticket" },
+{ korean: "기차역", english: "Train station" },
+{ korean: "버스표", english: "Bus ticket" },
+{ korean: "도착시간", english: "Arrival time" },
+{ korean: "출발시간", english: "Departure time" },
+{ korean: "관광", english: "Sightseeing / Tourism" },
+{ korean: "여행 가방", english: "Suitcase" },
+{ korean: "여권", english: "Passport" },
+{ korean: "관광지", english: "Tourist spot" },
+{ korean: "지도 앱", english: "Map app" },
+
+// --- More Family & Relationships ---
+{ korean: "애인", english: "Boyfriend / Girlfriend" },
+{ korean: "약혼자", english: "Fiancé / Fiancée" },
+{ korean: "친구 사귀기", english: "Making friends" },
+{ korean: "동거하다", english: "To live together" },
+{ korean: "부모님께 인사하다", english: "Greet parents" },
+{ korean: "결혼식", english: "Wedding" },
+{ korean: "생일", english: "Birthday" },
+{ korean: "기념일", english: "Anniversary" },
+{ korean: "이사하다", english: "To move house" },
+{ korean: "방문하다", english: "To visit" },
+
+// --- More Nature & Environment ---
+{ korean: "숲속", english: "Inside the forest" },
+{ korean: "해변", english: "Beach" },
+{ korean: "폭포", english: "Waterfall" },
+{ korean: "계곡", english: "Valley" },
+{ korean: "산책하다", english: "To take a walk" },
+{ korean: "등산하다", english: "To hike / Climb" },
+{ korean: "바닷가", english: "Seaside" },
+{ korean: "지구", english: "Earth" },
+{ korean: "환경", english: "Environment" },
+{ korean: "쓰레기", english: "Trash / Garbage" },
+
+// --- More Health & Body ---
+{ korean: "머리카락", english: "Hair" },
+{ korean: "손가락", english: "Finger" },
+{ korean: "발가락", english: "Toe" },
+{ korean: "치아", english: "Teeth" },
+{ korean: "피부", english: "Skin" },
+{ korean: "감기", english: "Cold (illness)" },
+{ korean: "두통", english: "Headache" },
+{ korean: "약국", english: "Pharmacy" },
+{ korean: "운동장", english: "Playground / Field" },
+{ korean: "체육관", english: "Gym" },
+
+// --- More Time & Calendar ---
+{ korean: "새벽", english: "Dawn / Early morning" },
+{ korean: "아침", english: "Morning" },
+{ korean: "점심", english: "Noon / Lunch" },
+{ korean: "저녁", english: "Evening / Dinner" },
+{ korean: "밤", english: "Night" },
+{ korean: "시작", english: "Start / Beginning" },
+{ korean: "끝", english: "End / Finish" },
+{ korean: "오늘 하루", english: "Today" },
+{ korean: "이번 주말", english: "This weekend" },
+{ korean: "지난 주말", english: "Last weekend" },
+
+// --- More Adjectives & Descriptive Words ---
+{ korean: "강하다", english: "Strong" },
+{ korean: "약하다", english: "Weak" },
+{ korean: "즐겁다", english: "Fun / Enjoyable" },
+{ korean: "심심하다", english: "Bored" },
+{ korean: "행복하다", english: "Happy" },
+{ korean: "슬프다", english: "Sad" },
+{ korean: "화나다", english: "Angry" },
+{ korean: "아프다", english: "Sick / Hurt" },
+{ korean: "배부르다", english: "Full (after eating)" },
+{ korean: "배고프다", english: "Hungry" },
+
+// --- More Verbs ---
+{ korean: "전화하다", english: "To call / Phone" },
+{ korean: "메시지 보내다", english: "To send a message" },
+{ korean: "사진 찍다", english: "To take a photo" },
+{ korean: "찾다", english: "To find" },
+{ korean: "잃다", english: "To lose" },
+{ korean: "열심히 하다", english: "To work hard" },
+{ korean: "즐기다", english: "To enjoy" },
+{ korean: "기다리다", english: "To wait" },
+{ korean: "도착하다", english: "To arrive" },
+{ korean: "출발하다", english: "To depart" },
+
+// --- Family & Relationships ---
+{korean: "형", english: "Older brother (male)"},
+{korean: "오빠", english: "Older brother (female)"},
+{korean: "누나", english: "Older sister (male)"},
+{korean: "언니", english: "Older sister (female)"},
+{korean: "동생", english: "Younger sibling"},
+{korean: "친구", english: "Friend"},
+{korean: "친척", english: "Relatives"},
+{korean: "이웃", english: "Neighbor"},
+{korean: "결혼하다", english: "To get married"},
+
+// --- Nature & Environment ---
+{korean: "산", english: "Mountain"},
+{korean: "강", english: "River"},
+{korean: "강물", english: "River water"},
+{korean: "바다", english: "Sea"},
+{korean: "호수", english: "Lake"},
+{korean: "섬", english: "Island"},
+{korean: "숲", english: "Forest"},
+{korean: "숲속", english: "Inside the forest"},
+{korean: "산책하다", english: "To take a walk"},
+{korean: "등산하다", english: "To hike / Climb"},
+{korean: "폭포", english: "Waterfall"},
+{korean: "계곡", english: "Valley"},
+{korean: "바위", english: "Rock"},
+{korean: "모래", english: "Sand"},
+{korean: "해변", english: "Beach"},
+{korean: "바닷가", english: "Seaside"},
+{korean: "달", english: "Moon"},
+{korean: "별", english: "Star"},
+{korean: "비", english: "Rain"},
+{korean: "눈", english: "Snow"},
+{korean: "바람", english: "Wind"},
+{korean: "비바람", english: "Rain and wind / Storm"},
+{korean: "무지개", english: "Rainbow"},
+{korean: "지구", english: "Earth"},
+{korean: "환경", english: "Environment"},
+{korean: "쓰레기", english: "Trash / Garbage"},
+
+// --- School & Study ---
+{korean: "학교", english: "School"},
+{korean: "초등학교", english: "Elementary school"},
+{korean: "중학교", english: "Middle school"},
+{korean: "고등학교", english: "High school"},
+{korean: "대학교", english: "University / College"},
+{korean: "학원", english: "Private academy / Cram school"},
+{korean: "반", english: "Class / Group"},
+{korean: "수업", english: "Class / Lesson"},
+{korean: "교실", english: "Classroom"},
+{korean: "도서관", english: "Library"},
+{korean: "시험", english: "Exam / Test"},
+{korean: "숙제", english: "Homework"},
+{korean: "과제", english: "Assignment / Task"},
+{korean: "교과서", english: "Textbook"},
+{korean: "노트", english: "Notebook"},
+{korean: "연필", english: "Pencil"},
+{korean: "펜", english: "Pen"},
+{korean: "책", english: "Book"},
+{korean: "필통", english: "Pencil case"},
+{korean: "칠판", english: "Blackboard / Whiteboard"},
+{korean: "지우개", english: "Eraser"},
+{korean: "자", english: "Ruler"},
+{korean: "가위", english: "Scissors"},
+{korean: "풀", english: "Glue"},
+{korean: "컴퓨터", english: "Computer"},
+{korean: "노트북", english: "Laptop"},
+{korean: "프로젝트", english: "Project"},
+{korean: "발표하다", english: "To present / Give a presentation"},
+{korean: "듣다", english: "To listen"},
+{korean: "읽다", english: "To read"},
+{korean: "쓰다", english: "To write"},
+{korean: "공부하다", english: "To study"},
+{korean: "연습하다", english: "To practice"},
+{korean: "복습하다", english: "To review (lessons)"},
+{korean: "예습하다", english: "To preview (lessons)"},
+{korean: "시험보다", english: "To take a test"},
+{korean: "문제", english: "Problem / Question"},
+{korean: "답", english: "Answer"},
+{korean: "점수", english: "Score / Grade"},
+{korean: "성적", english: "Grades / Academic performance"},
+{korean: "선생님", english: "Teacher"},
+{korean: "교사", english: "Instructor / Teacher"},
+{korean: "학생", english: "Student"},
+{korean: "반장", english: "Class president"},
+{korean: "조장", english: "Group leader"},
+{korean: "친구", english: "Friend / Classmate"},
+{korean: "동아리", english: "Club / Student organization"},
+{korean: "체육", english: "Physical education"},
+{korean: "미술", english: "Art"},
+{korean: "음악", english: "Music"},
+{korean: "과학", english: "Science"},
+{korean: "수학", english: "Mathematics"},
+{korean: "국어", english: "Korean language"},
+{korean: "영어", english: "English"},
+{korean: "역사", english: "History"},
+{korean: "사회", english: "Social studies"},
+{korean: "지리", english: "Geography"},
+{korean: "정보", english: "Information / Computer studies"},
+{korean: "체험학습", english: "Field trip / Experiential learning"},
+{korean: "교환학생", english: "Exchange student"},
+{korean: "학교생활", english: "School life"},
+{korean: "입학", english: "Entrance / Enrollment"},
+{korean: "졸업", english: "Graduation"},
+{korean: "수료", english: "Completion / Certificate"},
+{korean: "학기", english: "Semester"},
+{korean: "방과후", english: "After school"},
+{korean: "점심시간", english: "Lunch time"},
+{korean: "휴식시간", english: "Break / Recess"},
+{korean: "상장", english: "Certificate / Award"},
+{korean: "학습", english: "Learning / Study"},
+{korean: "과목", english: "Subject"},
+{korean: "시험기간", english: "Exam period"},
+{korean: "기말고사", english: "Final exam"},
+{korean: "중간고사", english: "Midterm exam"},
+{korean: "퀴즈", english: "Quiz"},
+{korean: "평가", english: "Evaluation / Assessment"},
+{korean: "참석하다", english: "To attend / Participate"},
+{korean: "결석하다", english: "To be absent"},
+{korean: "지각하다", english: "To be late"},
+{korean: "출석하다", english: "To be present / Attend class"},
+{korean: "수업 준비하다", english: "To prepare for class"},
+{korean: "질문하다", english: "To ask a question"},
+{korean: "대답하다", english: "To answer"},
+{korean: "토론하다", english: "To discuss / Debate"},
+{korean: "연구하다", english: "To research / Study"},
+{korean: "실험하다", english: "To experiment"},
+{korean: "발표 준비하다", english: "To prepare a presentation"},
+{korean: "숙제를 제출하다", english: "To submit homework"},
+{korean: "복습하다", english: "To review lessons"},
+{korean: "예습하다", english: "To prepare lessons in advance"},
+{korean: "그룹활동", english: "Group activity"},
+{korean: "토의하다", english: "To discuss / Have a discussion"},
+{korean: "문제풀이", english: "Solving problems"},
+{korean: "필기하다", english: "To take notes"},
+{korean: "시험 준비하다", english: "To prepare for a test"},
+{korean: "시험지", english: "Test paper / Exam sheet"},
+{korean: "참고서", english: "Reference book"},
+{korean: "교과 과정", english: "Curriculum"},
+{korean: "학교 행사", english: "School event"},
+{korean: "운동회", english: "Sports day / Field day"},
+{korean: "졸업식", english: "Graduation ceremony"},
+{korean: "입학식", english: "Entrance ceremony"},
+{korean: "방학", english: "School vacation / Break"},
+{korean: "여름방학", english: "Summer vacation"},
+{korean: "겨울방학", english: "Winter vacation"},
+{korean: "학년", english: "Grade / Year in school"},
+{korean: "반 친구", english: "Classmate"},
+{korean: "학교생활기록부", english: "School record / Transcript"},
+{korean: "생활기록부", english: "Student record book"},
+{korean: "학교 규칙", english: "School rules"},
+{korean: "교칙", english: "School regulations"},
+{korean: "교내", english: "Inside the school"},
+{korean: "교외", english: "Outside the school"},
+{korean: "학교 행사 참여하다", english: "Participate in school event"},
+{korean: "학습 목표", english: "Learning goal"},
+{korean: "학습 계획", english: "Study plan"},
+{korean: "학교 상담", english: "School counseling"},
+{korean: "교사 상담", english: "Teacher consultation"},
+{korean: "진로 상담", english: "Career guidance / Counseling"},
+{korean: "장학금", english: "Scholarship"},
+{korean: "학교 시설", english: "School facilities"},
+{korean: "체육관", english: "Gymnasium"},
+{korean: "운동장", english: "Playground / Field"},
+{korean: "강의실", english: "Lecture room"},
+{korean: "연구실", english: "Laboratory / Research room"},
+{korean: "실험실", english: "Lab / Science lab"},
+{korean: "컴퓨터실", english: "Computer room"},
+{korean: "음악실", english: "Music room"},
+{korean: "미술실", english: "Art room"},
+{korean: "도서실", english: "Library room"},
+{korean: "교무실", english: "Teacher's office"},
+{korean: "급식실", english: "Cafeteria / Lunchroom"},
+{korean: "화장실", english: "Restroom / Bathroom"},
+{korean: "복도", english: "Hallway / Corridor"},
+{korean: "계단", english: "Stairs"},
+{korean: "출입문", english: "Entrance / Door"},
+{korean: "창문", english: "Window"},
+{korean: "책상", english: "Desk"},
+{korean: "의자", english: "Chair"},
+{korean: "칠판 지우개", english: "Board eraser"},
+{korean: "분필", english: "Chalk"},
+{korean: "연필깎이", english: "Pencil sharpener"},
+{korean: "학용품", english: "School supplies"},
+{korean: "교재", english: "Teaching material / Textbook"},
+{korean: "교재비", english: "Textbook fee"},
+{korean: "출석부", english: "Attendance book"},
+{korean: "성적표", english: "Report card / Grade sheet"},
+{korean: "학사일정", english: "Academic calendar"},
+{korean: "학교 홈페이지", english: "School website"},
+{korean: "온라인 수업", english: "Online class"},
+{korean: "원격 수업", english: "Remote learning / Online class"},
+{korean: "학습 자료", english: "Learning material"},
+{korean: "과외", english: "Private tutoring / Lessons"},
+{korean: "보충 수업", english: "Make-up class / Supplementary lesson"},
+{korean: "동아리 활동", english: "Club activity"},
+{korean: "방과 후 활동", english: "After-school activity"},
+
+// --- More Korean Language & Culture ---
+{korean: "한글", english: "Hangul / Korean alphabet"},
+{korean: "한국어", english: "Korean language"},
+{korean: "말하기", english: "Speaking"},
+{korean: "듣기", english: "Listening"},
+{korean: "읽기", english: "Reading"},
+{korean: "쓰기", english: "Writing"},
+{korean: "발음", english: "Pronunciation"},
+{korean: "문법", english: "Grammar"},
+{korean: "단어", english: "Word / Vocabulary"},
+{korean: "표현", english: "Expression / Phrase"},
+{korean: "회화", english: "Conversation / Speaking practice"},
+{korean: "속담", english: "Proverb / Saying"},
+{korean: "노래", english: "Song"},
+{korean: "드라마", english: "Drama / TV series"},
+{korean: "문화", english: "Culture"},
+{korean: "역사", english: "History"},
+{korean: "전통", english: "Tradition"},
+{korean: "음식", english: "Food / Cuisine"},
+{korean: "축제", english: "Festival"},
+{korean: "관광", english: "Tourism / Sightseeing"},
+
+// --- Teacher & Student ---
+{ korean: "선생님 안녕하세요", english: "Hello, teacher" },
+{ korean: "선생님 감사합니다", english: "Thank you, teacher" },
+{ korean: "선생님, 질문 있어요", english: "Teacher, I have a question" },
+{ korean: "잘 모르겠어요", english: "I don’t understand" },
+{ korean: "다시 설명해 주세요", english: "Please explain again" },
+{ korean: "조금만 천천히 말해 주세요", english: "Please speak a little slowly" },
+{ korean: "알겠습니다", english: "I understand" },
+{ korean: "숙제 있어요?", english: "Do we have homework?" },
+{ korean: "숙제를 잊어버렸어요", english: "I forgot my homework" },
+{ korean: "내일 시험이에요?", english: "Is the test tomorrow?" },
+{ korean: "점수를 어떻게 받아요?", english: "How do I get my score?" },
+{ korean: "수업이 언제 시작해요?", english: "When does the class start?" },
+{ korean: "수업이 끝났어요", english: "The class is finished" },
+{ korean: "오늘 수업 재미있었어요", english: "Today's class was fun" },
+{ korean: "도와주세요", english: "Please help me" },
+{ korean: "죄송합니다", english: "I’m sorry" },
+{ korean: "수업 자료 주세요", english: "Please give me the class materials" },
+{ korean: "잘 가르쳐 주셔서 감사합니다", english: "Thank you for teaching well" },
+{ korean: "선생님 최고예요!", english: "You’re the best, teacher!" },
+{ korean: "내일 봬요", english: "See you tomorrow" },
+
+// --- To Sell & To Buy ---
+{ korean: "이거 얼마예요?", english: "How much is this?" },
+{ korean: "조금 깎아 주세요", english: "Please give me a discount" },
+{ korean: "너무 비싸요", english: "It’s too expensive" },
+{ korean: "싸게 해 주세요", english: "Please make it cheaper" },
+{ korean: "다른 색 있어요?", english: "Do you have another color?" },
+{ korean: "이거 있어요?", english: "Do you have this?" },
+{ korean: "저거 주세요", english: "Please give me that one" },
+{ korean: "카드 돼요?", english: "Do you accept cards?" },
+{ korean: "현금으로 할게요", english: "I’ll pay in cash" },
+{ korean: "더 큰 사이즈 있어요?", english: "Do you have a bigger size?" },
+{ korean: "이거 새 거예요?", english: "Is this new?" },
+{ korean: "이거 맛있어요", english: "This is delicious" },
+{ korean: "무료예요?", english: "Is it free?" },
+{ korean: "몇 개예요?", english: "How many are there?" },
+{ korean: "하나 주세요", english: "Give me one, please" },
+{ korean: "두 개 주세요", english: "Give me two, please" },
+{ korean: "서비스 있어요?", english: "Is there a freebie?" },
+{ korean: "영수증 주세요", english: "Please give me a receipt" },
+{ korean: "포장해 주세요", english: "Please pack it up" },
+{ korean: "감사합니다", english: "Thank you" },
+{ korean: "또 올게요", english: "I’ll come again" },
+
+// --- Health / Medical Flashcards ---
+{ korean: "건강", english: "Health" },
+{ korean: "병원", english: "Hospital" },
+{ korean: "약국", english: "Pharmacy" },
+{ korean: "의사", english: "Doctor" },
+{ korean: "간호사", english: "Nurse" },
+{ korean: "응급실", english: "Emergency room" },
+{ korean: "진료", english: "Medical consultation" },
+{ korean: "진단", english: "Diagnosis" },
+{ korean: "치료", english: "Treatment" },
+{ korean: "수술", english: "Surgery" },
+{ korean: "예방접종", english: "Vaccination" },
+{ korean: "증상", english: "Symptom" },
+{ korean: "통증", english: "Pain" },
+{ korean: "발열", english: "Fever" },
+{ korean: "기침", english: "Cough" },
+{ korean: "감기", english: "Cold (illness)" },
+{ korean: "독감", english: "Flu" },
+{ korean: "두통", english: "Headache" },
+{ korean: "구토", english: "Vomiting" },
+{ korean: "설사", english: "Diarrhea" },
+{ korean: "알레르기", english: "Allergy" },
+{ korean: "피부발진", english: "Skin rash" },
+{ korean: "호흡곤란", english: "Difficulty breathing" },
+{ korean: "혈압", english: "Blood pressure" },
+{ korean: "심장", english: "Heart" },
+{ korean: "감염", english: "Infection" },
+{ korean: "항생제", english: "Antibiotic" },
+{ korean: "처방전", english: "Prescription" },
+{ korean: "복용방법", english: "Dosage / How to take medication" },
+{ korean: "약을 먹다", english: "To take medicine" },
+{ korean: "휴식이 필요해요", english: "You need rest" },
+{ korean: "아파요", english: "It hurts / I am sick" },
+{ korean: "응급 상황이에요", english: "It's an emergency" },
+{ korean: "도와주세요", english: "Please help me" },
+{ korean: "구급차를 불러 주세요", english: "Please call an ambulance" },
+{ korean: "보험카드", english: "Insurance card" },
+{ korean: "의료비", english: "Medical expenses" },
+{ korean: "회복", english: "Recovery" },
+{ korean: "건강검진", english: "Health check-up" },
+{ korean: "영양", english: "Nutrition" },
+{ korean: "운동", english: "Exercise" },
+{ korean: "수면", english: "Sleep" },
+{ korean: "스트레스", english: "Stress" },
+{ korean: "정신건강", english: "Mental health" },
+
+// --- Talk Conservation Flashcards ---
+{ korean: "말하다", english: "To speak" },
+{ korean: "이야기하다", english: "To talk / To chat" },
+{ korean: "대화하다", english: "To have a conversation" },
+{ korean: "듣다", english: "To listen" },
+{ korean: "묻다", english: "To ask" },
+{ korean: "대답하다", english: "To answer / To reply" },
+{ korean: "질문", english: "Question" },
+{ korean: "답", english: "Answer" },
+{ korean: "인사하다", english: "To greet" },
+{ korean: "소개하다", english: "To introduce" },
+{ korean: "설명하다", english: "To explain" },
+{ korean: "부탁하다", english: "To request / ask a favor" },
+{ korean: "약속하다", english: "To promise" },
+{ korean: "이해하다", english: "To understand" },
+{ korean: "오해하다", english: "To misunderstand" },
+{ korean: "말을 걸다", english: "To start a conversation" },
+{ korean: "말을 놓다", english: "To speak casually" },
+{ korean: "조용히 하세요", english: "Please be quiet" },
+{ korean: "말하지 마세요", english: "Please don’t talk" },
+{ korean: "다시 말해 주세요", english: "Please say it again" },
+{ korean: "천천히 말해 주세요", english: "Please speak slowly" },
+{ korean: "무슨 뜻이에요?", english: "What does it mean?" },
+{ korean: "이게 뭐예요?", english: "What is this?" },
+{ korean: "그건 뭐예요?", english: "What is that?" },
+{ korean: "어떻게 말해요?", english: "How do you say it?" },
+{ korean: "한국어로 뭐예요?", english: "What is it in Korean?" },
+{ korean: "정말요?", english: "Really?" },
+{ korean: "진짜요?", english: "Is that true?" },
+{ korean: "그래요", english: "Okay / That’s right" },
+{ korean: "그렇죠", english: "Isn’t it?" },
+{ korean: "맞아요", english: "That’s correct" },
+{ korean: "몰라요", english: "I don’t know" },
+{ korean: "알아요", english: "I know" },
+{ korean: "괜찮아요", english: "It’s okay" },
+{ korean: "좋아요", english: "It’s good" },
+{ korean: "싫어요", english: "I don’t like it" },
+{ korean: "좋아해요", english: "I like it / I like you" },
+{ korean: "재미있어요", english: "It’s interesting / fun" },
+{ korean: "지루해요", english: "It’s boring" },
+{ korean: "정중하게 말해요", english: "Speak politely" },
+{ korean: "큰 소리로 말해요", english: "Speak loudly" },
+{ korean: "작게 말해요", english: "Speak softly" },
+{ korean: "비밀이에요", english: "It’s a secret" },
+{ korean: "농담이에요", english: "It’s a joke" },
+{ korean: "진심이에요", english: "I mean it / I’m serious" },
+{ korean: "잠깐 이야기할 수 있어요?", english: "Can we talk for a moment?" },
+{ korean: "시간 있어요?", english: "Do you have time?" },
+{ korean: "이야기 나눠요", english: "Let’s have a talk" },
+{ korean: "좋은 하루 보내세요", english: "Have a good day" },
+
+// --- Relative To Job(Part-time) Flashcards ---
+{ korean: "알바", english: "Part-time job" },
+{ korean: "아르바이트하다", english: "To work part-time" },
+{ korean: "근무 시간", english: "Working hours" },
+{ korean: "출근하다", english: "To come to work" },
+{ korean: "퇴근하다", english: "To leave work" },
+{ korean: "시급", english: "Hourly wage" },
+{ korean: "급여", english: "Salary / Pay" },
+{ korean: "사장님", english: "Owner / Boss" },
+{ korean: "동료", english: "Coworker / Colleague" },
+{ korean: "손님", english: "Customer / Guest" },
+{ korean: "주문 받다", english: "To take an order" },
+{ korean: "음식 준비하다", english: "To prepare food" },
+{ korean: "음료 제공하다", english: "To serve drinks" },
+{ korean: "계산하다", english: "To calculate / Checkout" },
+{ korean: "카운터", english: "Counter" },
+{ korean: "테이블 청소하다", english: "To clean tables" },
+{ korean: "설거지하다", english: "To wash dishes" },
+{ korean: "메뉴판", english: "Menu" },
+{ korean: "추천하다", english: "To recommend" },
+{ korean: "손님 응대하다", english: "To serve customers" },
+{ korean: "예약하다", english: "To make a reservation" },
+{ korean: "자리 안내하다", english: "To guide guests to seats" },
+{ korean: "포장하다", english: "To pack / Take-out" },
+{ korean: "배달하다", english: "To deliver" },
+{ korean: "주방", english: "Kitchen" },
+{ korean: "홀", english: "Dining area / Hall" },
+{ korean: "청소하다", english: "To clean" },
+{ korean: "재고 확인하다", english: "To check stock" },
+{ korean: "마감 준비하다", english: "To close / End shift preparation" },
+{ korean: "손님 맞이하다", english: "To welcome customers" },
+{ korean: "서비스 제공하다", english: "To provide service" },
+{ korean: "손님 불만 처리하다", english: "To handle customer complaints" },
+{ korean: "포스기", english: "POS machine" },
+{ korean: "메뉴 추천하다", english: "To recommend menu items" },
+{ korean: "주문 확인하다", english: "To confirm an order" },
+{ korean: "계산기", english: "Calculator / Checkout" },
+{ korean: "영수증 발급하다", english: "To issue a receipt" },
+{ korean: "교대 근무하다", english: "To work in shifts" },
+{ korean: "휴식 시간", english: "Break time" },
+{ korean: "시간 엄수", english: "Punctuality / Be on time" },
+{ korean: "일 잘하다", english: "To work well / Efficiently" },
+{ korean: "업무 지시 받다", english: "To receive work instructions" },
+{ korean: "청결 유지하다", english: "To maintain cleanliness" },
+{ korean: "고객 응대 매뉴얼", english: "Customer service manual" },
+{ korean: "주문량 많다", english: "High volume of orders" },
+{ korean: "알바 지원하다", english: "To apply for part-time job" },
+{ korean: "면접하다", english: "To have an interview" },
+{ korean: "시급 인상", english: "Hourly wage increase" },
+{ korean: "근무 평가", english: "Work performance evaluation" },
+
+// --- Relative To Job(Company) Flashcards ---
+{ korean: "회사", english: "Company / Office" },
+{ korean: "직장", english: "Workplace / Job" },
+{ korean: "직원", english: "Employee" },
+{ korean: "상사", english: "Boss / Superior" },
+{ korean: "동료", english: "Colleague / Coworker" },
+{ korean: "팀장", english: "Team leader" },
+{ korean: "회의", english: "Meeting" },
+{ korean: "업무", english: "Work / Task" },
+{ korean: "보고서", english: "Report" },
+{ korean: "제안서", english: "Proposal" },
+{ korean: "계약", english: "Contract" },
+{ korean: "근무시간", english: "Working hours" },
+{ korean: "출근하다", english: "To go to work" },
+{ korean: "퇴근하다", english: "To leave work" },
+{ korean: "휴가", english: "Vacation / Leave" },
+{ korean: "급여", english: "Salary / Pay" },
+{ korean: "승진", english: "Promotion" },
+{ korean: "면접", english: "Interview" },
+{ korean: "지원하다", english: "To apply (for a job)" },
+{ korean: "채용", english: "Hiring / Recruitment" },
+{ korean: "업무 처리하다", english: "To handle work / complete tasks" },
+{ korean: "회의 참석하다", english: "To attend a meeting" },
+{ korean: "보고하다", english: "To report" },
+{ korean: "업무 계획", english: "Work plan / schedule" },
+{ korean: "프로젝트", english: "Project" },
+{ korean: "목표", english: "Goal / Target" },
+{ korean: "업무 성과", english: "Work performance" },
+{ korean: "동기 부여", english: "Motivation" },
+{ korean: "회의록", english: "Meeting minutes" },
+{ korean: "자료 조사", english: "Data research" },
+{ korean: "업무 분담", english: "Task allocation" },
+{ korean: "문서 작성", english: "Document preparation" },
+{ korean: "업무 보고", english: "Work report" },
+{ korean: "회의 진행하다", english: "To conduct a meeting" },
+{ korean: "회의 일정", english: "Meeting schedule" },
+{ korean: "업무 지시", english: "Work instruction / order" },
+{ korean: "업무 평가", english: "Work evaluation" },
+{ korean: "직장 내 규칙", english: "Workplace rules" },
+{ korean: "회의 준비", english: "Prepare for a meeting" },
+{ korean: "협력하다", english: "To cooperate / collaborate" },
+{ korean: "업무 효율", english: "Work efficiency" },
+{ korean: "문제 해결", english: "Problem solving" },
+{ korean: "보고 자료", english: "Reporting materials" },
+{ korean: "업무 요청", english: "Work request" },
+{ korean: "회의 참석 여부", english: "Meeting attendance" },
+{ korean: "업무 진행 상황", english: "Work progress" },
+{ korean: "직장 문화", english: "Workplace culture" },
+{ korean: "연봉", english: "Annual salary" },
+{ korean: "퇴직", english: "Resignation / Retirement" },
+{ korean: "입사하다", english: "To join a company" },
+{ korean: "해고", english: "Dismissal / Firing" },
+{ korean: "업무 관련", english: "Work-related" },
+{ korean: "업무 협조", english: "Work cooperation" },
+{ korean: "회의 중", english: "During the meeting" },
+{ korean: "업무 처리 속도", english: "Work pace / speed" },
+
+// --- Course & Class Flashcards ---
+{ korean: "수업", english: "Class / Lesson" },
+{ korean: "강의", english: "Lecture" },
+{ korean: "교실", english: "Classroom" },
+{ korean: "학생", english: "Student" },
+{ korean: "선생님", english: "Teacher" },
+{ korean: "교재", english: "Textbook / Teaching materials" },
+{ korean: "숙제", english: "Homework" },
+{ korean: "시험", english: "Exam / Test" },
+{ korean: "과제", english: "Assignment / Task" },
+{ korean: "수강하다", english: "To take a course / enroll" },
+{ korean: "신청하다", english: "To apply / register" },
+{ korean: "강사", english: "Instructor" },
+{ korean: "강의실", english: "Lecture hall" },
+{ korean: "출석하다", english: "To attend / be present" },
+{ korean: "결석하다", english: "To be absent" },
+{ korean: "수업 참여하다", english: "To participate in class" },
+{ korean: "질문하다", english: "To ask a question" },
+{ korean: "답변하다", english: "To answer / respond" },
+{ korean: "토론하다", english: "To discuss / debate" },
+{ korean: "발표하다", english: "To present / give a presentation" },
+{ korean: "시험 준비하다", english: "To prepare for an exam" },
+{ korean: "점수", english: "Score / Grade" },
+{ korean: "평가", english: "Evaluation / Assessment" },
+{ korean: "강좌", english: "Course / Program" },
+{ korean: "교육", english: "Education / Training" },
+{ korean: "수료하다", english: "To complete a course" },
+{ korean: "강의 계획표", english: "Syllabus / Class schedule" },
+{ korean: "학습 자료", english: "Learning materials" },
+{ korean: "온라인 수업", english: "Online class" },
+{ korean: "오프라인 수업", english: "Offline / In-person class" },
+{ korean: "과목", english: "Subject / Course" },
+{ korean: "강의 시간", english: "Lecture time / Class time" },
+{ korean: "등록하다", english: "To register / enroll" },
+{ korean: "수강료", english: "Tuition fee" },
+{ korean: "질문을 받다", english: "To receive questions" },
+{ korean: "수업 계획", english: "Class plan" },
+{ korean: "수업 방식", english: "Class method / format" },
+{ korean: "보충 수업", english: "Supplementary class / makeup class" },
+{ korean: "시험 문제", english: "Exam questions" },
+{ korean: "학점", english: "Credit / Grade point" },
+{ korean: "강의 평가", english: "Lecture evaluation" },
+{ korean: "학습 목표", english: "Learning objectives" },
+{ korean: "팀 프로젝트", english: "Team project" },
+{ korean: "과제 제출", english: "Assignment submission" },
+{ korean: "학기", english: "Semester / Term" },
+{ korean: "교수님", english: "Professor" },
+{ korean: "강의 자료", english: "Lecture materials / slides" },
+{ korean: "실습", english: "Practical training / Lab work" },
+{ korean: "토론 수업", english: "Discussion class" },
+{ korean: "학습 환경", english: "Learning environment" },
+{ korean: "교육 과정", english: "Curriculum / Program" },
+
+// --- Bank Card,Sim Card etc.. Flashcards ---
+{ korean: "휴대폰", english: "Mobile phone / Cellphone" },
+{ korean: "핸드폰", english: "Cellphone (casual)" },
+{ korean: "스마트폰", english: "Smartphone" },
+{ korean: "폰 번호", english: "Phone number" },
+{ korean: "전화하다", english: "To call / make a phone call" },
+{ korean: "문자 보내다", english: "To send a text message" },
+{ korean: "메시지", english: "Message / Text" },
+{ korean: "전화기", english: "Telephone / Phone device" },
+{ korean: "SIM 카드", english: "SIM card" },
+{ korean: "유심", english: "USIM / SIM card" },
+{ korean: "충전하다", english: "To recharge / top up" },
+{ korean: "데이터", english: "Mobile data" },
+{ korean: "통화", english: "Call / Voice call" },
+{ korean: "음성 통화", english: "Voice call" },
+{ korean: "전화 요금", english: "Phone bill" },
+{ korean: "은행 카드", english: "Bank card / ATM card" },
+{ korean: "체크카드", english: "Debit card" },
+{ korean: "신용카드", english: "Credit card" },
+{ korean: "현금카드", english: "Cash card" },
+{ korean: "카드 결제", english: "Card payment" },
+{ korean: "계좌", english: "Bank account" },
+{ korean: "은행 계좌", english: "Bank account" },
+{ korean: "비밀번호", english: "Password / PIN" },
+{ korean: "은행 업무", english: "Banking service" },
+{ korean: "카드 분실", english: "Lost card" },
+{ korean: "재발급하다", english: "To reissue / replace" },
+{ korean: "교통카드", english: "Transport card / Transit card" },
+{ korean: "티머니 카드", english: "T-money card" },
+{ korean: "버스 카드", english: "Bus card" },
+{ korean: "지하철 카드", english: "Subway card" },
+{ korean: "충전소", english: "Recharge station / kiosk" },
+{ korean: "카드 잔액", english: "Card balance" },
+{ korean: "승차", english: "Boarding / Get on (bus/train)" },
+{ korean: "하차", english: "Getting off (bus/train)" },
+{ korean: "교통비", english: "Fare / Transportation fee" },
+{ korean: "잔액 확인하다", english: "Check balance" },
+{ korean: "충전하다", english: "To recharge / top up card" },
+{ korean: "분실 신고", english: "Report loss" },
+{ korean: "카드 사용하다", english: "To use a card" },
+{ korean: "잔액 부족", english: "Insufficient balance" },
+{ korean: "카드 등록", english: "Card registration" },
+{ korean: "자동 충전", english: "Auto recharge / auto top-up" },
+{ korean: "단말기", english: "Device / Terminal" },
+{ korean: "결제 단말기", english: "Payment terminal" },
+{ korean: "카드 결제하다", english: "To pay by card" },
+{ korean: "PIN 번호 입력", english: "Enter PIN number" },
+{ korean: "현금 인출", english: "Cash withdrawal" },
+{ korean: "잔액 조회", english: "Check account balance" },
+
+// --- Daily Conservation Flashcards ---
+{ korean: "안녕하세요", english: "Hello" },
+{ korean: "감사합니다", english: "Thank you" },
+{ korean: "죄송합니다", english: "I’m sorry" },
+{ korean: "네", english: "Yes" },
+{ korean: "아니요", english: "No" },
+{ korean: "잘 지내요?", english: "How are you?" },
+{ korean: "좋아요", english: "Good / I like it" },
+{ korean: "싫어요", english: "Don’t like / I don’t want it" },
+{ korean: "알겠습니다", english: "I understand / Got it" },
+{ korean: "몰라요", english: "I don’t know" },
+{ korean: "괜찮아요", english: "It’s okay / No problem" },
+{ korean: "잠깐만요", english: "Just a moment / Wait" },
+{ korean: "잘 가요", english: "Goodbye / Go well" },
+];
+
+// ---------------- Flashcards Logic ----------------
+let currentCard = 0;
+let autoFlip = true;
+let flipInterval;
+const flashcardContainer = document.getElementById('flashcardContainer');
+const progress = document.getElementById('progress');
+
+function showCard(index) {
+    flashcardContainer.innerHTML = '';
+    const card = document.createElement('div');
+    card.className = 'flashcard';
+    card.innerHTML = `<div class="front">${flashcards[index].korean}</div>
+                      <div class="back">${flashcards[index].english}</div>`;
+    card.addEventListener('click', () => card.classList.toggle('flipped'));
+    flashcardContainer.appendChild(card);
+    progress.textContent = `Card ${index + 1} / ${flashcards.length}`;
+}
+
+document.getElementById('prevCard').addEventListener('click', () => {
+    currentCard = (currentCard - 1 + flashcards.length) % flashcards.length;
+    showCard(currentCard);
+});
+document.getElementById('nextCard').addEventListener('click', () => {
+    currentCard = (currentCard + 1) % flashcards.length;
+    showCard(currentCard);
+});
+document.getElementById('shuffleCards').addEventListener('click', () => {
+    flashcards.sort(() => Math.random() - 0.5);
+    currentCard = 0;
+    showCard(currentCard);
+});
+document.getElementById('pauseFlip').addEventListener('click', () => autoFlip = !autoFlip);
+
+function startAutoFlip() {
+    flipInterval = setInterval(() => {
+        if (autoFlip) {
+            currentCard = (currentCard + 1) % flashcards.length;
+            showCard(currentCard);
+        }
+    }, 3000);
+}
+
+// ---------------- Quiz Logic ----------------
+const quizContainer = document.getElementById('quizContainer');
+const submitQuiz = document.getElementById('submitQuiz');
+const scoreDisplay = document.getElementById('score');
+const tryAgainBtn = document.getElementById('tryAgain');
+let quizCards = [];
+
+function generateQuiz() {
+    quizContainer.innerHTML = '';
+    scoreDisplay.textContent = '';
+    tryAgainBtn.style.display = 'none';
+    submitQuiz.style.display = 'inline-block';
+
+    // 10 random unique questions
+    const indices = [];
+    while (indices.length < Math.min(10, flashcards.length)) {
+        const rand = Math.floor(Math.random() * flashcards.length);
+        if (!indices.includes(rand)) indices.push(rand);
+    }
+    quizCards = indices.map(i => flashcards[i]);
+
+    quizCards.forEach((card, index) => {
+        const options = [card.english];
+        while (options.length < 4) {
+            const rand = flashcards[Math.floor(Math.random() * flashcards.length)].english;
+            if (!options.includes(rand)) options.push(rand);
+        }
+        options.sort(() => Math.random() - 0.5);
+
+        const qDiv = document.createElement('div');
+        qDiv.style.marginBottom = '1rem';
+        qDiv.innerHTML = `<p>${index + 1}. ${card.korean}</p>`;
+        options.forEach(opt => {
+            qDiv.innerHTML += `<label><input type="radio" name="q${index}" value="${opt}"> ${opt}</label><br>`;
+        });
+        quizContainer.appendChild(qDiv);
+    });
+}
+
+submitQuiz.addEventListener('click', () => {
+    let score = 0;
+    quizCards.forEach((card, index) => {
+        const selected = document.querySelector(`input[name="q${index}"]:checked`);
+        if (selected && selected.value === card.english) score++;
+    });
+    scoreDisplay.textContent = `Your score: ${score} / ${quizCards.length}`;
+    submitQuiz.style.display = 'none';
+    tryAgainBtn.style.display = 'inline-block';
+});
+
+tryAgainBtn.addEventListener('click', () => generateQuiz());
+
+// ---------------- Navigation ----------------
+document.getElementById('flashcardsBtn').addEventListener('click', () => {
+    document.getElementById('flashcardsSection').style.display = 'block';
+    document.getElementById('quizSection').style.display = 'none';
+    showCard(currentCard);
+});
+document.getElementById('quizBtn').addEventListener('click', () => {
+    document.getElementById('flashcardsSection').style.display = 'none';
+    document.getElementById('quizSection').style.display = 'block';
+    generateQuiz();
+});
+
+// ---------------- Initialize ----------------
+showCard(currentCard);
+startAutoFlip();
+</script>
+</body>
+</html>
